@@ -1334,7 +1334,9 @@ impl WaylandState {
                 if configure.state.contains(SCTKWindowState::FULLSCREEN) {
                     state |= WindowState::FULL_SCREEN;
                 }
-                if configure.state.contains(SCTKWindowState::MAXIMIZED) {
+                if configure.state.contains(SCTKWindowState::MAXIMIZED)
+                    || configure.state.contains(SCTKWindowState::TILED)
+                {
                     state |= WindowState::MAXIMIZED;
                 }
 
