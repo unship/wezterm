@@ -119,8 +119,10 @@ async fn show_notif_impl(notif: ToastNotification) -> Result<(), Box<dyn std::er
         )
         .await?;
 
-    // Move on_click out so we can consume it (FnOnce) in the action handler.
+    // Move on_click and url out so we can consume them in the action handler
+    // without partially moving `notif`.
     let mut on_click = notif.on_click;
+    let url = notif.url;
 
     let (mut invoked_stream, abort_invoked) = abortable(proxy.receive_action_invoked().await?);
     let (mut closed_stream, abort_closed) = abortable(proxy.receive_notification_closed().await?);
@@ -130,7 +132,7 @@ async fn show_notif_impl(notif: ToastNotification) -> Result<(), Box<dyn std::er
             while let Some(signal) = invoked_stream.next().await {
                 let args = signal.args()?;
                 if args.nid == notification {
-                    if let Some(url) = notif.url.as_ref() {
+                    if let Some(url) = url.as_ref() {
                         wezterm_open_url::open_url(url);
                     }
                     if let Some(callback) = on_click.take() {
