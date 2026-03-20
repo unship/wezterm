@@ -238,14 +238,19 @@ impl WaylandWindow {
             dpi: config.dpi.unwrap_or(crate::DEFAULT_DPI) as usize,
         };
 
+        let decorations = config.window_decorations;
         let window = {
             let xdg_shell = &conn.wayland_state.borrow().xdg;
-            xdg_shell.create_window(surface.clone(), Decorations::RequestServer, &qh)
+            let initial_decorations = if decorations == WindowDecorations::NONE {
+                Decorations::None
+            } else {
+                Decorations::RequestServer
+            };
+            xdg_shell.create_window(surface.clone(), initial_decorations, &qh)
         };
 
         window.set_app_id(class_name.to_string());
         window.set_title(name.to_string());
-        let decorations = config.window_decorations;
 
         let decor_mode = if decorations == WindowDecorations::NONE {
             None
@@ -1329,7 +1334,9 @@ impl WaylandState {
                 if configure.state.contains(SCTKWindowState::FULLSCREEN) {
                     state |= WindowState::FULL_SCREEN;
                 }
-                if configure.state.contains(SCTKWindowState::MAXIMIZED) {
+                if configure.state.contains(SCTKWindowState::MAXIMIZED)
+                    || configure.state.contains(SCTKWindowState::TILED)
+                {
                     state |= WindowState::MAXIMIZED;
                 }
 

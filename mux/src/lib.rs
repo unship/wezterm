@@ -95,6 +95,10 @@ pub enum MuxNotification {
         old_workspace: String,
         new_workspace: String,
     },
+    ActiveTabChanged {
+        window_id: WindowId,
+        tab_id: TabId,
+    },
 }
 
 static SUB_ID: AtomicUsize = AtomicUsize::new(0);
@@ -363,9 +367,7 @@ fn read_from_pane_pty(
     dead.store(true, Ordering::Relaxed);
 }
 
-lazy_static::lazy_static! {
-    static ref MUX: Mutex<Option<Arc<Mux>>> = Mutex::new(None);
-}
+static MUX: Mutex<Option<Arc<Mux>>> = Mutex::new(None);
 
 pub struct MuxWindowBuilder {
     window_id: WindowId,

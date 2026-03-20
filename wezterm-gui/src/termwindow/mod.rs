@@ -58,7 +58,7 @@ use std::collections::{HashMap, LinkedList};
 use std::ops::Add;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use termwiz::hyperlink::Hyperlink;
 use termwiz::surface::SequenceNo;
@@ -88,10 +88,9 @@ use prevcursor::PrevCursorPos;
 
 const ATLAS_SIZE: usize = 128;
 
-lazy_static::lazy_static! {
-    static ref WINDOW_CLASS: Mutex<String> = Mutex::new(wezterm_gui_subcommands::DEFAULT_WINDOW_CLASS.to_owned());
-    static ref POSITION: Mutex<Option<GuiPosition>> = Mutex::new(None);
-}
+static WINDOW_CLASS: LazyLock<Mutex<String>> =
+    LazyLock::new(|| Mutex::new(wezterm_gui_subcommands::DEFAULT_WINDOW_CLASS.to_owned()));
+static POSITION: Mutex<Option<GuiPosition>> = Mutex::new(None);
 
 pub const ICON_DATA: &'static [u8] = include_bytes!("../../../assets/icon/terminal.png");
 
@@ -1308,6 +1307,11 @@ impl TermWindow {
                 MuxNotification::TabTitleChanged { .. } => {
                     self.update_title_post_status();
                 }
+                MuxNotification::ActiveTabChanged { tab_id, .. } => {
+                    self.emit_window_event("window-tab-switched", None);
+                    window.invalidate();
+                    let _ = tab_id;
+                }
                 MuxNotification::PaneAdded(_)
                 | MuxNotification::WorkspaceRenamed { .. }
                 | MuxNotification::PaneRemoved(_)
@@ -1493,7 +1497,8 @@ impl TermWindow {
             }
             MuxNotification::TabAddedToWindow { window_id, .. }
             | MuxNotification::WindowTitleChanged { window_id, .. }
-            | MuxNotification::WindowInvalidated(window_id) => {
+            | MuxNotification::WindowInvalidated(window_id)
+            | MuxNotification::ActiveTabChanged { window_id, .. } => {
                 if window_id != mux_window_id {
                     return true;
                 }
